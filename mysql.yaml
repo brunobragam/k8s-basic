@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+  namespace: default
+spec:
+  clusterIP: "10.96.0.10"
+  ports:
+  - name: mysql
+    port: 3306
+   # protocol: UDP
+    #targetPort: 53
+  selector:
+    app: mysql
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name:  
+spec:
+  serviceName: "mysql"
+  replicas: 1
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_DATABASE
+          valueFrom: 
+            configMapKeyRef:
+              name: dados #origin of this resource
+              key: DB_DATABASE
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom: 
+            secretKeyRef:
+              name: senhas #origin of this resource
+              key: DB_PASSWORD
+        volumeMounts:
+        - name: mysql-ps
+          mountPath: /var/lib/mysql
+      voulumes:
+      - name: mysql-ps
+        persistentVolumeClaim:
+          claimName: volume-mysql
